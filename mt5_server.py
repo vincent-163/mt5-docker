@@ -152,11 +152,12 @@ class MT5Handler(BaseHTTPRequestHandler):
         if arr is None:
             self._send_json({"error": True, "last_error": list(mt5.last_error())})
             return
-        raw = arr.tobytes()
+        import io, numpy as np
+        buf = io.BytesIO()
+        np.save(buf, arr)
+        raw = buf.getvalue()
         self.send_response(200)
         self.send_header("Content-Type", "application/x-numpy")
-        self.send_header("X-Numpy-Dtype", str(arr.dtype))
-        self.send_header("X-Numpy-Shape", json.dumps(arr.shape))
         self.send_header("Content-Length", len(raw))
         self.end_headers()
         self.wfile.write(raw)

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Entrypoint: starts Xvfb, configures MT5, starts rpyc server.
+# Entrypoint: starts Xvfb, configures MT5, starts HTTP server.
 set -e
 
 PYTHON="C:\\Python39\\python.exe"
