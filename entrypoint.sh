@@ -42,6 +42,8 @@ update_ini() {
 # 1. Start Xvfb
 XVFB_DISPLAY="${XVFB_DISPLAY:-:99}"
 export DISPLAY="$XVFB_DISPLAY"
+# Clean stale lock file from previous run (fixes container restart)
+rm -f "/tmp/.X${XVFB_DISPLAY#:}-lock"
 Xvfb "$XVFB_DISPLAY" -screen 0 1024x768x24 -ac &
 XVFB_PID=$!
 sleep 1
@@ -119,9 +121,9 @@ if [ -n "$MT5_LOGIN" ]; then
     echo "Terminal pre-launch wait complete"
 fi
 
-# 7. Start rpyc server (foreground)
-echo "Starting rpyc server..."
-wine64 "$PYTHON" "Z:\\root\\rpyc_server.py" 2>/dev/null &
-RPYC_PID=$!
+# 7. Start MT5 HTTP server (foreground)
+echo "Starting MT5 HTTP server..."
+wine64 "$PYTHON" "Z:\\root\\mt5_server.py" 2>/dev/null &
+SERVER_PID=$!
 
-wait $RPYC_PID
+wait $SERVER_PID

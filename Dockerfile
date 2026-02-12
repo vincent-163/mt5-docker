@@ -111,6 +111,7 @@ ENV http_proxy=""
 ENV https_proxy=""
 
 COPY rpyc_server.py /root/rpyc_server.py
+COPY mt5_server.py /root/mt5_server.py
 COPY entrypoint.sh /root/entrypoint.sh
 RUN chmod +x /root/entrypoint.sh
 
