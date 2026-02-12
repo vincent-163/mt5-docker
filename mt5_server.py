@@ -201,7 +201,30 @@ def _h_initialize(h, b):
     _delete_accounts_dat()
 
     result = mt5.initialize(path, login=login, password=password, server=server)
+
+    # If initialize succeeded but AutoTrading is disabled (retcode 10027 on
+    # order_send), the terminal flagged an "account changed" event from the
+    # warmup account.  Fix: shut down, kill terminal, wipe accounts.dat, and
+    # reinitialize cleanly so the terminal never sees the old account.
     if result:
+        ti = mt5.terminal_info()
+        if ti and not ti.trade_allowed:
+            _log("AutoTrading disabled after initialize, restarting terminal...")
+            mt5.shutdown()
+            _kill_terminal()
+            _prepare_ini(login=login, server=server)
+            _delete_accounts_dat()
+            time.sleep(2)
+            result = mt5.initialize(path, login=login, password=password, server=server)
+            if result:
+                ti2 = mt5.terminal_info()
+                _log(f"Restart succeeded, trade_allowed={ti2.trade_allowed if ti2 else '?'}")
+                h._send_json({"ok": True})
+                return
+            err = mt5.last_error()
+            _log(f"Restart failed: {err}")
+            h._send_json({"ok": False, "last_error": list(err)})
+            return
         h._send_json({"ok": True})
         return
 
