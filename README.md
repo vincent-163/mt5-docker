@@ -16,9 +16,20 @@ No prebuilt Wine prefix or `servers.dat` needed — everything is downloaded and
 ## Prerequisites
 
 - Docker
-- If Docker containers can't reach the internet directly, set `BUILD_PROXY` to an HTTP proxy reachable from containers (e.g. `http://172.17.0.1:8080` for a host proxy via Docker gateway)
+
+## Prebuilt Image
+
+A prebuilt image is available on GHCR:
+
+```bash
+docker pull ghcr.io/vincent-163/mt5-docker:latest
+```
+
+Skip to [Run](#run) if using the prebuilt image — no build step needed.
 
 ## Build
+
+Building from source requires internet access from Docker. If containers can't reach the internet directly, set `BUILD_PROXY`.
 
 ```bash
 # Direct internet access
