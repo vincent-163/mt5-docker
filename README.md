@@ -25,62 +25,73 @@ A prebuilt image is available on GHCR:
 docker pull ghcr.io/vincent-163/mt5-docker:latest
 ```
 
-Skip to [Run](#run) if using the prebuilt image — no build step needed.
+Skip to [Run](#run) if using the prebuilt image (use `ghcr.io/vincent-163/mt5-docker` as the image name instead of `mt5-rpyc`).
 
 ## Build
 
-Building from source requires internet access from Docker. If containers can't reach the internet directly, set `BUILD_PROXY`.
+Building from source requires internet access from Docker. If containers can't reach the internet directly, pass a proxy via `--build-arg`.
 
 ```bash
 # Direct internet access
-./build_and_run.sh build
+docker build -t mt5-rpyc .
 
-# With proxy
-BUILD_PROXY=http://172.17.0.1:8080 ./build_and_run.sh build
+# With proxy (e.g. host proxy via Docker gateway)
+docker build \
+  --build-arg http_proxy=http://172.17.0.1:8080 \
+  --build-arg https_proxy=http://172.17.0.1:8080 \
+  --build-arg WINE_PROXY_ADDRESS=172.17.0.1:8080 \
+  -t mt5-rpyc .
 ```
+
+`http_proxy`/`https_proxy` are used by `curl` during build. `WINE_PROXY_ADDRESS` (host:port, no scheme) configures Wine's IE proxy so the MT5 installer can download files.
 
 Build takes ~10 minutes (downloads Wine ~62MB, MT5 ~23MB, Python packages ~27MB, plus MQL5 warmup).
 
 ## Run
 
 ```bash
-# Start container
-MT5_PROXY_ADDRESS=172.17.0.1:8080 \
-MT5_LOGIN=<your_login> \
-MT5_PASSWORD='<your_password>' \
-MT5_SERVER='<broker_ip:port>' \
-./build_and_run.sh run
+docker run -d --name mt5-rpyc -p 18812:18812 \
+  -e MT5_LOGIN=<your_login> \
+  -e MT5_PASSWORD='<your_password>' \
+  -e MT5_SERVER='<broker_ip:port>' \
+  mt5-rpyc
 ```
 
 Environment variables:
 
 | Variable | Description |
 |---|---|
-| `MT5_PROXY_ADDRESS` | HTTP proxy for MT5 broker connection (host:port) |
+| `MT5_PROXY_ADDRESS` | HTTP proxy for MT5 broker connection (host:port, optional) |
 | `MT5_LOGIN` | MT5 account number |
 | `MT5_PASSWORD` | MT5 account password |
 | `MT5_SERVER` | Broker server — either name (`BrokerName-Live`) or direct IP (`1.2.3.4:443`) |
 
 Using a direct IP for `MT5_SERVER` avoids needing `servers.dat` (which maps broker names to IPs).
 
+With proxy:
+
+```bash
+docker run -d --name mt5-rpyc -p 18812:18812 \
+  -e MT5_PROXY_ADDRESS=172.17.0.1:8080 \
+  -e MT5_LOGIN=<your_login> \
+  -e MT5_PASSWORD='<your_password>' \
+  -e MT5_SERVER='<broker_ip:port>' \
+  mt5-rpyc
+```
+
+## Logs / Stop
+
+```bash
+docker logs -f mt5-rpyc    # Tail container logs
+docker stop mt5-rpyc       # Stop container
+docker rm mt5-rpyc         # Remove container
+```
+
 ## Test
 
 ```bash
-# Install rpyc on host (if not already)
 pip install rpyc
-
-# Run test client
 python3 mt5_client.py <login> <password> <server>
-
-# Example
-python3 mt5_client.py <login> '<password>' '<server_ip:port>'
-```
-
-## Other Commands
-
-```bash
-./build_and_run.sh logs    # Tail container logs
-./build_and_run.sh stop    # Stop and remove container
 ```
 
 ## Using from Python
@@ -120,12 +131,4 @@ conn.close()
 - The MT5 installer downloads files from MetaQuotes CDN during build, so a proxy (or direct internet) is required at build time.
 - Wine 10.0 spawns many `explorer.exe` processes over time. The entrypoint runs a reaper that culls them every 10s.
 - `initialize()` requires credentials — calling it without login/password always times out.
-- The `[Experts] Enabled` flag resets to 0 when the account changes. The rpyc server handles this by writing `common.ini` before each `initialize()`.
-
-## Docker Host
-
-If `docker` isn't accessible at the default socket, set `DOCKER_HOST`:
-
-```bash
-export DOCKER_HOST=unix:///run/docker.sock
-```
+- The `[Experts] Enabled` flag resets to 0 when the account changes. The server handles this by writing `common.ini` before each `initialize()`.
